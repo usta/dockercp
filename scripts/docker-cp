@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""A Simple implementation of Docker CP."""
+
+import sys
+import getopt
+
+from colorama import init
+from termcolor import colored
+import dockercp
+
+
+def usage(exit_status):
+    """Show command line usage."""
+    msg = ('\nUsage: docker-cp [ --buffer-length=BufferSize  ] ContainerName:SourcePath DestinationPath\n'
+           'DockerCp A Simple Implementation of Docker Cp\n'
+           '\n\nOptions:\n'
+           '-h              --help                        Display usage information and exit.\n'
+           '-v              --version                     Display version information and exit.\n'
+           '-b              --buffer-length               Fixed buffer length for fetching file(s). (Default is 1024)\n'
+           'Ex: docker-cp mydockercontainer:/etc/fedora-release ~/Downloads\n'
+           '    docker-cp --buffer-length=10 mydockercontainer:/etc/fedora-release .\n\n'
+           'Don\'t forget to wrap your path if there is space in it :\n'
+           '    docker-cp \"mydockercontainer:/etc/old config/abc.txt\" \"~/new Archive\"\n')
+    print(msg)
+    sys.exit(exit_status)
+
+
+def show_version():
+    """Show the program version."""
+    print('Version %s on Python%s' % (dockercp.__version__,
+                                      sys.version_info[0]))
+    sys.exit(0)
+
+
+def main():
+    """Parse command line options/arguments and execute."""
+    opts = []
+    args = []
+    buffer_len = 1024
+
+    # colorama - Colorful output
+    init()
+
+    try:
+        arg_names = ["help", "version", "buffer-length="]
+        opts, args = getopt.gnu_getopt(sys.argv[1:],
+                                       "hvb:",
+                                       arg_names)
+    except getopt.GetoptError:
+        usage(2)
+
+    for option, arg in opts:
+        if option in ("-h", "--help"):
+            usage(0)
+        if option in ("-v", "--version"):
+            show_version()
+        if option in ("-b", "--buffer-length"):
+            buffer_len = int(arg)
+
+    if not args:
+        usage(2)
+    elif len(args) != 2:
+        print(colored("You have to enter at least 2 arguments", "red"))
+        usage(2)
+    else:
+        if args[0].count(":") < 1:
+            print("You have to enter docker container name")
+            usage(2)
+
+        src_container = args[0][:args[0].index(":")]
+
+        # We are just getting dockername part in args[0]
+        # we couldn't use .split because there might be another
+        # : in the text and : is valid filename in *nix systems
+
+        src_path = args[0][args[0].index(":") + 1:]
+        dest_path = args[1]
+
+        try:
+            dockercp.DockerCP(src_container,
+                              src_path,
+                              dest_path,
+                              buffer_len)
+        except Exception as e:
+            print("There was an error:\n{}".format(e))
+
+
+if __name__ == '__main__':
+    main()
